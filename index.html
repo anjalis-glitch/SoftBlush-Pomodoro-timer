@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Pink pixel pomodoro </title>
+<style>
+  :root{
+    --bg:#fff0f5;
+    --panel:#fff6f8;
+    --accent:#ff6f94;
+    --muted:#d08a9b;
+    --border:#ffc9d6;
+    --progress-bg: linear-gradient(90deg,#ffe6ee,#ffd9e8);
+    --progress-fill: linear-gradient(90deg,#ff9eb6,#ff6f94);
+  }
+  html,body{height:100%;margin:0;background:var(--bg);font-family: "Courier New", monospace;-webkit-font-smoothing:antialiased;}
+  .page{min-height:100%;display:flex;align-items:center;justify-content:center;padding:36px;box-sizing:border-box;}
+  .stage{width:1000px;max-width:98vw;display:grid;grid-template-columns:1fr 360px;gap:28px;align-items:start;}
+
+  /* Main panel */
+  .main{background:var(--panel);border:8px solid var(--border);box-shadow:0 0 0 10px var(--bg);border-radius:14px;padding:28px 36px;position:relative;overflow:visible;}
+  /* Bow (medium) */
+  .bow-wrap{display:flex;justify-content:center;margin-top:-60px;margin-bottom:20px;}
+  .bow-img{width:290px;height:auto;image-rendering:pixelated;filter:drop-shadow(0 8px 8px rgba(0,0,0,0.08));animation:bowPulse 4s ease-in-out infinite;display:block}
+  @keyframes bowPulse{0%{transform:scale(.985);}50%{transform:scale(1.03);}100%{transform:scale(.985);}}
+  .bow-shine{position:absolute;left:50%;top:calc(50% - 60px);transform:translateX(-50%);width:320px;height:120px;pointer-events:none;background:linear-gradient(120deg,rgba(255,255,255,0) 0%, rgba(255,255,255,.65) 50%, rgba(255,255,255,0) 100%);animation:shine 2.8s linear infinite;mix-blend-mode:overlay;border-radius:6px}
+  @keyframes shine{0%{transform:translateX(-240px)}100%{transform:translateX(240px)}}
+
+  /* Progress bar */
+  .progress-wrap{width:100%;display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:6px}
+  .progress-bar{position:relative;width:88%;height:56px;background:var(--progress-bg);border:6px solid #ffd0df;border-radius:12px;overflow:visible;image-rendering:pixelated}
+  .progress-fill{position:absolute;left:0;top:0;bottom:0;width:0%;background:var(--progress-fill);transition:width .25s linear;border-right:4px solid rgba(255,255,255,0.25);box-sizing:border-box}
+
+  /* Fish inside progress (medium) */
+  #fish{width:92px;height:auto;image-rendering:pixelated;position:absolute;top:2px;left:6px;pointer-events:none;user-select:none;will-change:transform;animation:fishBob 2.6s ease-in-out infinite}
+  @keyframes fishBob{0%{transform:translateY(0)}50%{transform:translateY(-7px) rotate(-1deg)}100%{transform:translateY(0)}}
+
+  /* Timer */
+  .timer{font-size:86px;color:var(--accent);text-align:center;font-weight:700;margin-top:14px;text-shadow:0 6px 0 #fff;letter-spacing:1px}
+  .controls{display:flex;gap:12px;justify-content:center;margin-top:12px}
+  button{font-family:inherit;font-size:16px;padding:12px 18px;border-radius:10px;border:4px solid #c95b73;background:linear-gradient(#ff7aa0,#ff5a83);color:white;cursor:pointer;box-shadow:0 6px 0 rgba(0,0,0,0.06)}
+  button.ghost{background:linear-gradient(#fff,#fff6f8);color:var(--accent);border:4px solid #ffd6de}
+  button:active{transform:translateY(2px)}
+  .label-row{display:flex;justify-content:space-between;margin-top:14px}
+  .muted{color:var(--muted);font-size:14px}
+
+  /* Sparkles */
+  .sparkles{position:absolute;inset:12px;pointer-events:none}
+  .spark{position:absolute;font-size:22px;color:#fff;opacity:.9;animation:twinkle 2.8s ease-in-out infinite}
+  .spark.small{font-size:14px;opacity:.7;animation-duration:3.6s}
+  @keyframes twinkle{0%{transform:scale(.9) translateY(0);opacity:.6}50%{transform:scale(1.25) translateY(-6px);opacity:1}100%{transform:scale(.9) translateY(0);opacity:.6}}
+
+  /* Settings panel */
+  .panel{background:linear-gradient(#fff7fb,#fff0f6);border:6px solid #ffd6de;padding:18px;border-radius:12px;height:fit-content}
+  .panel h3{text-align:center;color:var(--accent);letter-spacing:2px;font-size:15px;margin:0 0 8px}
+  .field{display:flex;justify-content:space-between;margin:10px 0;align-items:center}
+  input[type="number"]{width:110px;padding:8px;border-radius:8px;border:3px solid #f6c7d2;background:#fff6f8;text-align:center;font-size:14px}
+  .toggle{padding:8px 10px;border-radius:8px;border:3px solid #f6c7d2;background:#fff;cursor:pointer}
+  .small{font-size:12px;color:#b04b66;margin-top:8px;text-align:center}
+
+  @media (max-width:1050px){
+    .stage{grid-template-columns:1fr;justify-items:center}
+    .panel{width:92%}
+    .main{width:92%}
+    .bow-img{width:240px}
+    .timer{font-size:68px}
+    #fish{width:72px}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="stage">
+    <!-- MAIN -->
+    <div class="main" role="main" aria-label="Pixel Pomodoro Main">
+      <div class="bow-wrap">
+        <div style="position:relative;display:inline-block">
+          <img class="bow-img" src="bow.png" alt="bow">
+          <div class="bow-shine" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <div class="progress-wrap" aria-hidden="false">
+        <div class="progress-bar" id="progressBar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div class="progress-fill" id="fill"></div>
+          <img id="fish" src="fish.png" alt="fish">
+        </div>
+
+        <div style="width:88%;display:flex;justify-content:space-between;margin-top:6px">
+          <div class="muted">Progress</div>
+          <div class="muted" id="percentLabel">0%</div>
+        </div>
+      </div>
+
+      <div class="timer" id="timerDisplay" aria-live="polite">25:00</div>
+
+      <div class="controls" role="group" aria-label="Timer controls">
+        <button id="startBtn">Start</button>
+        <button id="pauseBtn" class="ghost">Pause</button>
+        <button id="resetBtn" class="ghost">Reset</button>
+        <button id="skipBtn" class="ghost">Skip</button>
+      </div>
+
+      <div class="label-row">
+        <div class="muted">Mode: <strong id="modeText">Work</strong></div>
+        <div class="muted">Cycles: <strong id="cycles">0</strong></div>
+      </div>
+
+      <div class="sparkles" aria-hidden="true">
+        <div class="spark" style="left:6%;top:14%">✦</div>
+        <div class="spark small" style="left:24%;top:60%">✦</div>
+        <div class="spark" style="left:72%;top:18%">✦</div>
+        <div class="spark small" style="left:84%;top:72%">✦</div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <aside class="panel" role="complementary" aria-label="Settings">
+      <h3>SETTINGS</h3>
+
+      <div class="field">
+        <label for="workInput">Work (min)</label>
+        <input id="workInput" type="number" min="1" value="25">
+      </div>
+
+      <div class="field">
+        <label for="shortInput">Short break (min)</label>
+        <input id="shortInput" type="number" min="1" value="5">
+      </div>
+
+      <div class="field">
+        <label for="longInput">Long break (min)</label>
+        <input id="longInput" type="number" min="1" value="15">
+      </div>
+
+      <div class="field">
+        <label>Auto-switch</label>
+        <button id="autoBtn" class="toggle">ON</button>
+      </div>
+
+      <div class="field">
+        <label>Sound</label>
+        <button id="soundBtn" class="toggle">ON</button>
+      </div>
+
+      <div class="field">
+        <label>Fish bob</label>
+        <button id="fishToggle" class="toggle">ON</button>
+      </div>
+
+      <div class="field">
+        <label>Pomos until long break</label>
+        <input id="cycleCount" type="number" min="1" value="4">
+      </div>
+
+      <div class="small">Shortcuts: Space = Start/Pause • r = Reset • s = Skip</div>
+    </aside>
+  </div>
+</div>
+
+<script>
+(() => {
+  // state
+  let workM = 25, shortM = 5, longM = 15;
+  let mode = 'work';
+  let autoSwitch = true;
+  let soundOn = true;
+  let fishBob = true;
+  let totalSeconds = workM * 60;
+  let secondsLeft = totalSeconds;
+  let timerId = null;
+  let cycles = 0;
+  let pomosBeforeLong = 4;
+  let pomosDone = 0;
+
+  // elements
+  const timerDisplay = document.getElementById('timerDisplay');
+  const startBtn = document.getElementById('startBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const skipBtn = document.getElementById('skipBtn');
+  const workInput = document.getElementById('workInput');
+  const shortInput = document.getElementById('shortInput');
+  const longInput = document.getElementById('longInput');
+  const autoBtn = document.getElementById('autoBtn');
+  const soundBtn = document.getElementById('soundBtn');
+  const fishToggle = document.getElementById('fishToggle');
+  const cycleCount = document.getElementById('cycleCount');
+  const fill = document.getElementById('fill');
+  const progressBar = document.getElementById('progressBar');
+  const percentLabel = document.getElementById('percentLabel');
+  const modeText = document.getElementById('modeText');
+  const cyclesText = document.getElementById('cycles');
+  const fish = document.getElementById('fish');
+
+  // helper
+  function fmt(s){ const m = Math.floor(s/60); const ss = s%60; return `${m}:${ss.toString().padStart(2,'0')}`; }
+
+  function applySettings(){
+    workM = Math.max(1, parseInt(workInput.value) || 25);
+    shortM = Math.max(1, parseInt(shortInput.value) || 5);
+    longM = Math.max(1, parseInt(longInput.value) || 15);
+    pomosBeforeLong = Math.max(1, parseInt(cycleCount.value) || 4);
+    totalSeconds = (mode === 'work' ? workM : (mode === 'short' ? shortM : longM)) * 60;
+    secondsLeft = Math.min(secondsLeft, totalSeconds);
+    updateUI();
+  }
+
+  function updateUI(){
+    timerDisplay.textContent = fmt(secondsLeft);
+    modeText.textContent = mode === 'work' ? 'Work' : (mode === 'short' ? 'Short Break' : 'Long Break');
+    cyclesText.textContent = cycles;
+
+    const done = totalSeconds - secondsLeft;
+    const pct = totalSeconds > 0 ? Math.round((done/totalSeconds) * 100) : 0;
+    fill.style.width = pct + '%';
+    progressBar.setAttribute('aria-valuenow', pct);
+    percentLabel.textContent = pct + '%';
+
+    // move fish: safe math to keep fish inside bar
+    const bw = progressBar.getBoundingClientRect().width;
+    const fw = fish.getBoundingClientRect().width;
+    const max = Math.max(6, bw - fw - 12);
+    const x = Math.max(6, Math.min(max, Math.round((pct/100) * max)));
+    fish.style.transform = `translate(${x}px, 0)`;
+  }
+
+  // sound
+  function playBeep(type='short'){
+    if(!soundOn) return;
+    try{
+      const C = window.AudioContext || window.webkitAudioContext;
+      const ctx = new C();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      if(type==='short'){ o.type='sine'; o.frequency.value=880; g.gain.value=0.06; o.start(); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.12); }
+      else { o.type='triangle'; o.frequency.value=480; g.gain.value=0.08; o.start(); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.22); }
+      setTimeout(()=>{ try{ o.stop(); ctx.close(); }catch(e){} }, 300);
+    }catch(e){}
+  }
+
+  // tick
+  function tick(){
+    if(secondsLeft > 0){
+      secondsLeft--;
+      if(secondsLeft === 3) playBeep('short');
+      updateUI();
+    } else {
+      clearInterval(timerId); timerId = null;
+      playBeep('finish');
+      if(mode === 'work'){ cycles++; pomosDone++; }
+      if(autoSwitch){
+        if(mode === 'work'){
+          if(pomosDone >= pomosBeforeLong){ startMode('long', true); pomosDone = 0; }
+          else { startMode('short', true); }
+        } else { startMode('work', true); }
+      } else {
+        updateUI();
+      }
+    }
+  }
+
+  function startMode(newMode, autorun=false){
+    mode = newMode;
+    totalSeconds = (mode === 'work' ? workM : (mode === 'short' ? shortM : longM)) * 60;
+    secondsLeft = totalSeconds;
+    updateUI();
+    if(autorun) startTimer();
+  }
+
+  function startTimer(){
+    if(timerId) return;
+    timerId = setInterval(tick, 1000);
+    startBtn.disabled = true;
+    pauseBtn.disabled = false;
+    // give fish a smoother transform during active run
+    fish.style.transition = 'transform 0.18s linear';
+  }
+
+  function pauseTimer(){
+    if(timerId){ clearInterval(timerId); timerId = null; startBtn.disabled = false; pauseBtn.disabled = true; }
+    fish.style.transition = 'transform 0.3s linear';
+  }
+
+  function resetAll(){
+    pauseTimer();
+    cycles = 0; pomosDone = 0;
+    startMode('work', false);
+    playBeep('short');
+  }
+
+  function skipSession(){
+    pauseTimer();
+    secondsLeft = 0;
+    tick();
+  }
+
+  // wire
+  startBtn.addEventListener('click', ()=>{ applySettings(); startTimer(); });
+  pauseBtn.addEventListener('click', ()=>{ pauseTimer(); });
+  resetBtn.addEventListener('click', ()=>{ resetAll(); });
+  skipBtn.addEventListener('click', ()=>{ skipSession(); });
+
+  [workInput, shortInput, longInput, cycleCount].forEach(i=>{ i.addEventListener('input', applySettings); i.addEventListener('change', applySettings); });
+
+  autoBtn.addEventListener('click', ()=>{ autoSwitch = !autoSwitch; autoBtn.textContent = autoSwitch ? 'ON':'OFF'; autoBtn.style.opacity = autoSwitch ? '1' : '.7'; });
+  soundBtn.addEventListener('click', ()=>{ soundOn = !soundOn; soundBtn.textContent = soundOn ? 'ON':'OFF'; soundBtn.style.opacity = soundOn ? '1' : '.7'; });
+  fishToggle.addEventListener('click', ()=>{ fishBob = !fishBob; fishToggle.textContent = fishBob ? 'ON':'OFF'; fish.style.animation = fishBob ? 'fishBob 2.6s ease-in-out infinite' : 'none'; });
+
+  window.addEventListener('keydown', (e)=>{
+    if(e.key === ' '){ e.preventDefault(); if(timerId) pauseTimer(); else startTimer(); }
+    if(e.key.toLowerCase() === 'r') resetAll();
+    if(e.key.toLowerCase() === 's') skipSession();
+  });
+
+  window.addEventListener('resize', ()=>{ updateUI(); });
+
+  // one-time user click to unlock audio in some browsers
+  window.addEventListener('click', function unlock(){ playBeep('short'); window.removeEventListener('click', unlock); }, {once:true});
+
+  // init
+  startMode('work', false);
+  pauseBtn.disabled = true;
+  updateUI();
+
+  // ensure UI syncs nicely even if layout changes
+  setInterval(()=>{ updateUI(); }, 250);
+})();
+</script>
+</body>
+</html>
